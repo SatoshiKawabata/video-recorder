@@ -2,22 +2,22 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { Message } from "./types";
 
-window.open("/index.html", "_blank");
-
 const App = () => {
-  console.log("window", window);
-
-  const [second, setSecond] = React.useState<number>(0);
-
   return (
     <div>
       <h1>Hello!!!</h1>
-      {second}
-      <button type="button" id="log">
-        log
-      </button>
-      <button type="button" id="send">
-        send to contents
+      <a href="/index.html" target="_blank">
+        Record screen
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          sendToContents({
+            type: "detect-video-element",
+          });
+        }}
+      >
+        Detect video element
       </button>
       <button
         type="button"
@@ -49,15 +49,13 @@ function logBackgroundValue() {
 }
 
 // 現在アクティブなタブにデータを送信
-function sendToContents() {
+function sendToContents(message: Message) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     const tab = tabs[0];
 
-    chrome.tabs.sendMessage(
-      tab.id || 0,
-      JSON.stringify({ contents: "test value from popup" }),
-      function (response) {}
-    );
+    chrome.tabs.sendMessage(tab.id || 0, JSON.stringify(message), function (
+      response
+    ) {});
   });
 }
 
@@ -68,4 +66,3 @@ const sendToBackground = (message: Message) => {
 };
 
 document.getElementById("log")?.addEventListener("click", logBackgroundValue);
-document.getElementById("send")?.addEventListener("click", sendToContents);
