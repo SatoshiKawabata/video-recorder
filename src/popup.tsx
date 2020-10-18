@@ -15,6 +15,7 @@ const App = () => {
           sendToContents({
             type: "detect-video-element",
           });
+          window.close();
         }}
       >
         Detect video element
