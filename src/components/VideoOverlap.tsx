@@ -3,6 +3,13 @@ import React from "react";
 interface P {
   video: HTMLVideoElement;
 }
+
+const finishRecord = () => {
+  console.log("record start");
+};
+
+const startRecord = () => {};
+
 export const VideoOverlap = ({ video }: P) => {
   const onClickRecord = () => {
     const isPlaying = !!(
@@ -12,20 +19,18 @@ export const VideoOverlap = ({ video }: P) => {
       video.readyState > 2
     );
     if (isPlaying) {
-      console.log("record start");
+      startRecord();
     } else {
-      video.addEventListener("play", () => {
-        console.log("on play");
-      });
+      video.play();
+      startRecord();
     }
 
-    video.addEventListener("ended", () => {
-      console.log("ended");
-    });
-    video.addEventListener("pause", () => {
-      console.log("pause");
-    });
+    video.removeEventListener("ended", finishRecord);
+    video.removeEventListener("pause", finishRecord);
+    video.addEventListener("ended", finishRecord);
+    video.addEventListener("pause", finishRecord);
   };
+
   return (
     <div>
       <div>

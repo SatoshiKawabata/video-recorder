@@ -59,7 +59,7 @@ const Main = () => {
       setVideo(undefined);
     };
 
-    app.addEventListener("mouseout", onAppMouseOut);
+    app.addEventListener("mouseleave", onAppMouseOut);
   }, []);
 
   if (video) {
