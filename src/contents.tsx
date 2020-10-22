@@ -1,116 +1,103 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import ReactDOM from "react-dom";
-import { Message } from "./types";
+import { Message, RecordConfig } from "./types";
 
-const Main = () => {
-  const [video, setVideo] = useState<HTMLVideoElement>();
+interface P {
+  onStartRecord: () => void;
+  onFinishRecord: () => void;
+  video: HTMLVideoElement;
+  config: RecordConfig;
+}
+
+const Main = ({ video, onStartRecord, onFinishRecord, config }: P) => {
   const [isRecording, setIsRecording] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const downloadRef = useRef<HTMLAnchorElement>(null);
 
-  useEffect(() => {
-    // const videos = document.querySelectorAll("video");
-    // videos.forEach((video) => {
-    //   video.removeEventListener("mouseover", onVideoMouseOver);
-    //   video.addEventListener("mouseover", onVideoMouseOver);
-    // });
-  }, []);
+  const onClickRecord = () => {
+    onStartRecord();
+    const isPlaying = !!(
+      video.currentTime > 0 &&
+      !video.paused &&
+      !video.ended &&
+      video.readyState > 2
+    );
 
-  const onVideoMouseOver = (e: MouseEvent) => {
-    if (isRecording) {
-      return;
+    const stream = (video as any).captureStream() as MediaStream;
+    const { mimeType, codec } = config;
+    const recorder = new MediaRecorder(stream, {
+      mimeType: `video/${mimeType};codecs=${codec}`,
+    });
+
+    recorder.addEventListener("dataavailable", (e) => {
+      const blob = new Blob([e.data], { type: e.data.type });
+      const url = URL.createObjectURL(blob);
+      video.pause();
+      setVideoUrl(url);
+      downloadRef.current?.click();
+    });
+
+    if (isPlaying) {
+      recorder.start();
+    } else {
+      video.play();
+      recorder.start();
     }
-    const videoElm = e.target as HTMLVideoElement;
-    const rect = videoElm.getBoundingClientRect();
-    setVideo(videoElm);
-    setRect(rect);
+    const finishRecord = () => {
+      recorder.stop();
+      setIsRecording(false);
+      onFinishRecord();
+    };
+
+    video.removeEventListener("ended", finishRecord);
+    video.removeEventListener("pause", finishRecord);
+    video.addEventListener("ended", finishRecord);
+    video.addEventListener("pause", finishRecord);
+
+    setIsRecording(true);
   };
 
-  if (video && rect) {
-    const onClickRecord = () => {
-      const isPlaying = !!(
-        video.currentTime > 0 &&
-        !video.paused &&
-        !video.ended &&
-        video.readyState > 2
-      );
+  const onClickFinish = () => {
+    video.pause();
+    onFinishRecord();
+  };
 
-      const stream = (video as any).captureStream() as MediaStream;
-      const mimeType = "webm";
-      const codec = "VP8";
-      const recorder = new MediaRecorder(stream, {
-        mimeType: `video/${mimeType};codecs=${codec}`,
-      });
-
-      recorder.addEventListener("dataavailable", (e) => {
-        const blob = new Blob([e.data], { type: e.data.type });
-        const url = URL.createObjectURL(blob);
-        video.pause();
-        setVideoUrl(url);
-      });
-
-      if (isPlaying) {
-        recorder.start();
-      } else {
-        video.play();
-        recorder.start();
-      }
-      const finishRecord = () => {
-        recorder.stop();
-        setIsRecording(false);
-      };
-
-      video.removeEventListener("ended", finishRecord);
-      video.removeEventListener("pause", finishRecord);
-      video.addEventListener("ended", finishRecord);
-      video.addEventListener("pause", finishRecord);
-
-      setIsRecording(true);
-    };
-
-    const onClickFinish = () => {
-      video.pause();
-    };
-
-    return (
-      <div
-        style={{
-          position: "fixed",
-          background: "rgba(255,255,255,0.6)",
-          top: `${rect.top}px`,
-          left: `${rect.left}px`,
-          width: `${rect.width}px`,
-          height: `${rect.height}px`,
-        }}
-        onMouseLeave={() => {
-          if (isRecording) {
-            return;
-          }
-          setVideo(undefined);
-        }}
-      >
-        <div>
-          <h3>Record this video on play.</h3>
-          {isRecording ? (
-            <button type="button" onClick={onClickFinish}>
-              Finish
-            </button>
-          ) : (
-            <button type="button" onClick={onClickRecord}>
-              Record
-            </button>
-          )}
-          {videoUrl ? (
-            <a download="test.webbm" href={videoUrl}>
-              download
-            </a>
-          ) : null}
-        </div>
+  const rect = video.getBoundingClientRect();
+  return (
+    <div
+      style={{
+        display: "block",
+        position: "fixed",
+        background: "rgba(255,255,255,0.6)",
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+      }}
+    >
+      <div>
+        <h3>Record this video on play.</h3>
+        {isRecording ? (
+          <button type="button" onClick={onClickFinish}>
+            Finish
+          </button>
+        ) : (
+          <button type="button" onClick={onClickRecord}>
+            Record
+          </button>
+        )}
+        {videoUrl ? (
+          <a
+            download={`${config.fileName}.${config.mimeType}`}
+            href={videoUrl}
+            ref={downloadRef}
+          >
+            download
+          </a>
+        ) : null}
       </div>
-    );
-  } else {
-    return null;
-  }
+    </div>
+  );
 };
 
 const app = document.createElement("div");
@@ -126,19 +113,41 @@ chrome.runtime.onMessage.addListener(
     const message: Message = JSON.parse(messageStr);
     switch (message.type) {
       case "detect-video-element":
-        if (!document.body.contains(app)) {
-          document.body.appendChild(app);
-          ReactDOM.render(<Main />, app);
-          const videos = document.querySelectorAll("video");
-          videos.forEach((video) => {
-            video.addEventListener("mouseover", () => {
-              // ここでRectをとってきてMainに渡す
-              // Mainからmouseleaveイベントをもらう
-              // Reactやめる方向の方が良い気がしてきた
-            });
-          });
+        if (message.data) {
+          onDetectVideoElement(message.data);
         }
         break;
     }
   }
 );
+
+const onDetectVideoElement = (config: RecordConfig) => {
+  if (!document.body.contains(app)) {
+    document.body.appendChild(app);
+
+    app.onmouseleave = () => {
+      ReactDOM.unmountComponentAtNode(app);
+    };
+
+    const videos = document.querySelectorAll("video");
+    videos.forEach((video) => {
+      video.addEventListener("mouseover", () => {
+        ReactDOM.render(
+          <Main
+            config={config}
+            video={video}
+            onStartRecord={() => {
+              app.onmouseleave = null;
+            }}
+            onFinishRecord={() => {
+              app.onmouseleave = () => {
+                ReactDOM.unmountComponentAtNode(app);
+              };
+            }}
+          />,
+          app
+        );
+      });
+    });
+  }
+};

@@ -14,6 +14,11 @@ const App = () => {
         onClick={() => {
           sendToContents({
             type: "detect-video-element",
+            data: {
+              codec: "VP8",
+              fileName: "test",
+              mimeType: "webm",
+            },
           });
           window.close();
         }}
