@@ -2,25 +2,19 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { Message } from "./types";
 
-const app = document.createElement("div");
-
 const Main = () => {
   const [video, setVideo] = useState<HTMLVideoElement>();
   const [isRecording, setIsRecording] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  const onMessage = (message: Message) => {
-    switch (message.type) {
-      case "detect-video-element":
-        const videos = document.querySelectorAll("video");
-        videos.forEach((video) => {
-          video.removeEventListener("mouseover", onVideoMouseOver);
-          video.addEventListener("mouseover", onVideoMouseOver);
-        });
-        break;
-    }
-  };
+  useEffect(() => {
+    // const videos = document.querySelectorAll("video");
+    // videos.forEach((video) => {
+    //   video.removeEventListener("mouseover", onVideoMouseOver);
+    //   video.addEventListener("mouseover", onVideoMouseOver);
+    // });
+  }, []);
 
   const onVideoMouseOver = (e: MouseEvent) => {
     if (isRecording) {
@@ -31,24 +25,6 @@ const Main = () => {
     setVideo(videoElm);
     setRect(rect);
   };
-
-  useEffect(() => {
-    // 送信側 contents -> background
-    chrome.runtime.sendMessage({
-      value: { contents: "test value from contents" },
-    });
-
-    // 受信側 other tab -> contents(popup/option -> contents)
-    chrome.runtime.onMessage.addListener(function (
-      messageStr: string,
-      sender,
-      sendResponse
-    ) {
-      const message: Message = JSON.parse(messageStr);
-      onMessage(message);
-      return;
-    });
-  }, []);
 
   if (video && rect) {
     const onClickRecord = () => {
@@ -137,5 +113,32 @@ const Main = () => {
   }
 };
 
-document.body.appendChild(app);
-ReactDOM.render(<Main />, app);
+const app = document.createElement("div");
+
+// 送信側 contents -> background
+chrome.runtime.sendMessage({
+  value: { contents: "test value from contents" },
+});
+
+// 受信側 other tab -> contents(popup/option -> contents)
+chrome.runtime.onMessage.addListener(
+  (messageStr: string, sender, sendResponse) => {
+    const message: Message = JSON.parse(messageStr);
+    switch (message.type) {
+      case "detect-video-element":
+        if (!document.body.contains(app)) {
+          document.body.appendChild(app);
+          ReactDOM.render(<Main />, app);
+          const videos = document.querySelectorAll("video");
+          videos.forEach((video) => {
+            video.addEventListener("mouseover", () => {
+              // ここでRectをとってきてMainに渡す
+              // Mainからmouseleaveイベントをもらう
+              // Reactやめる方向の方が良い気がしてきた
+            });
+          });
+        }
+        break;
+    }
+  }
+);
