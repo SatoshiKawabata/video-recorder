@@ -1,10 +1,13 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { useVideoRecorder } from "./recorder/VideoRecorder";
-import { startRecording, stopRecording } from "./recorder/VideoRecorder";
+import { RecordConfig } from "./types";
+
+enum VideoTypes {
+  Camera = "Camera",
+  Screen = "Screen",
+}
 
 const App = () => {
-  const [isRecording, setIsRecording] = React.useState(false);
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDeviceId, setSelectedVideoDeviceId] = React.useState<
@@ -13,16 +16,72 @@ const App = () => {
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = React.useState<
     string
   >();
+  const [videoType, setVideoType] = React.useState<VideoTypes>(
+    VideoTypes.Camera
+  );
+  const [stream, setStream] = React.useState<MediaStream | null>(null);
+  const [config, setConfig] = React.useState<RecordConfig>({
+    codec: "VP8",
+    fileName: "test",
+    mimeType: "webm",
+  });
+  const [recorder, setRecorder] = React.useState<MediaRecorder | null>(null);
+  const [videoUrl, setVideoUrl] = React.useState<string | null>(null);
+  const downloadRef = React.useRef<HTMLAnchorElement>(null);
+
   React.useEffect(() => {
     (async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      setStream(stream);
       const { videoDevices, audioDevices } = await getDevices();
-      setVideoDevices([...videoDevices, ...videoDevices, ...videoDevices]);
+      setSelectedVideoDeviceId(
+        stream.getVideoTracks()[0].getSettings().deviceId
+      );
+      setSelectedAudioDeviceId(
+        stream.getAudioTracks()[0].getSettings().deviceId
+      );
+      setVideoDevices(videoDevices);
       setAudioDevices(audioDevices);
-      setSelectedVideoDeviceId(videoDevices[0].deviceId);
-      setSelectedAudioDeviceId(audioDevices[0].deviceId);
     })();
   }, []);
-  console.log(videoDevices);
+
+  React.useEffect(() => {
+    (async () => {
+      stream && closeStream(stream);
+      if (
+        videoType === VideoTypes.Camera &&
+        selectedVideoDeviceId &&
+        selectedAudioDeviceId
+      ) {
+        const stream = await getCameraStream(
+          selectedVideoDeviceId,
+          selectedAudioDeviceId
+        );
+        setStream(stream);
+      } else {
+        if (videoType === VideoTypes.Screen) {
+          const stream = await getScreenStream();
+          stream.getVideoTracks()[0].onended = () => {
+            recorder && recorder.stop();
+            setRecorder(null);
+            setStream(null);
+          };
+          setStream(stream);
+        } else {
+          setStream(null);
+        }
+      }
+    })();
+  }, [selectedVideoDeviceId, selectedAudioDeviceId, videoType]);
+
+  React.useEffect(() => {
+    if (recorder) {
+    }
+  }, [recorder]);
+
   return (
     <>
       <select
@@ -63,25 +122,73 @@ const App = () => {
           );
         })}
       </select>
-      {isRecording ? (
-        <button
-          type="button"
-          onClick={() => {
-            setIsRecording(false);
-          }}
+      <select
+        onChange={(e) => {
+          setVideoType(e.target.value as VideoTypes);
+        }}
+      >
+        {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
+          return (
+            <option key={type} value={type} selected={type === videoType}>
+              {type}
+            </option>
+          );
+        })}
+      </select>
+      <video
+        controls
+        muted
+        autoPlay
+        ref={(v) => {
+          if (v) {
+            v.srcObject = stream;
+          }
+        }}
+      ></video>
+      {stream ? (
+        recorder ? (
+          <button
+            type="button"
+            onClick={() => {
+              recorder?.stop();
+              setRecorder(null);
+            }}
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              const { mimeType, codec } = config;
+              const recorder = new MediaRecorder(stream, {
+                mimeType: `video/${mimeType};codecs=${codec}`,
+              });
+
+              recorder.addEventListener("dataavailable", (e) => {
+                const blob = new Blob([e.data], { type: e.data.type });
+                const url = URL.createObjectURL(blob);
+                setVideoUrl(url);
+                setRecorder(null);
+                downloadRef.current?.click();
+              });
+              recorder.start();
+              setRecorder(recorder);
+            }}
+          >
+            Record
+          </button>
+        )
+      ) : null}
+      {videoUrl ? (
+        <a
+          ref={downloadRef}
+          href={videoUrl}
+          download={`${config.fileName}.${config.mimeType}`}
         >
-          Stop
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setIsRecording(true);
-          }}
-        >
-          Record
-        </button>
-      )}
+          download
+        </a>
+      ) : null}
     </>
   );
 };
@@ -106,4 +213,34 @@ const getDevices = async (): Promise<{
     audioDevices,
     videoDevices,
   };
+};
+
+const getScreenStream = async (): Promise<MediaStream> => {
+  // 画面収録
+  return await (navigator.mediaDevices as any).getDisplayMedia({
+    video: true,
+    audio: true,
+  });
+};
+
+const getCameraStream = async (
+  selectedVideoDeviceId: string,
+  selectedAudioDeviceId: string
+) => {
+  // カメラ
+  return await navigator.mediaDevices.getUserMedia({
+    video: {
+      deviceId: selectedVideoDeviceId,
+    },
+    audio: {
+      deviceId: selectedAudioDeviceId,
+    },
+  });
+};
+
+const closeStream = (stream: MediaStream) => {
+  stream.getTracks().forEach((t) => {
+    t.stop();
+    t.enabled = false;
+  });
 };
