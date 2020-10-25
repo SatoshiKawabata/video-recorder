@@ -62,17 +62,7 @@ const App = () => {
         );
         setStream(stream);
       } else {
-        if (videoType === VideoTypes.Screen) {
-          const stream = await getScreenStream();
-          stream.getVideoTracks()[0].onended = () => {
-            recorder && recorder.stop();
-            setRecorder(null);
-            setStream(null);
-          };
-          setStream(stream);
-        } else {
-          setStream(null);
-        }
+        setStream(null);
       }
     })();
   }, [selectedVideoDeviceId, selectedAudioDeviceId, videoType]);
@@ -84,6 +74,25 @@ const App = () => {
 
   return (
     <>
+      <h1>Video Recorder</h1>
+      <div>
+        {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
+          return (
+            <label>
+              <input
+                type="radio"
+                name="VideoTypes"
+                value={type}
+                checked={type === videoType}
+                onClick={() => {
+                  setVideoType(type);
+                }}
+              ></input>
+              {type}
+            </label>
+          );
+        })}
+      </div>
       <select
         onChange={(e) => {
           setSelectedVideoDeviceId(
@@ -122,19 +131,6 @@ const App = () => {
           );
         })}
       </select>
-      <select
-        onChange={(e) => {
-          setVideoType(e.target.value as VideoTypes);
-        }}
-      >
-        {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
-          return (
-            <option key={type} value={type} selected={type === videoType}>
-              {type}
-            </option>
-          );
-        })}
-      </select>
       <video
         controls
         muted
@@ -145,7 +141,8 @@ const App = () => {
           }
         }}
       ></video>
-      {stream ? (
+      {(videoType === VideoTypes.Camera && stream) ||
+      videoType === VideoTypes.Screen ? (
         recorder ? (
           <button
             type="button"
@@ -159,9 +156,17 @@ const App = () => {
         ) : (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const { mimeType, codec } = config;
-              const recorder = new MediaRecorder(stream, {
+              const s = await getScreenStream();
+              s.getVideoTracks()[0].onended = () => {
+                recorder && recorder.stop();
+                setRecorder(null);
+                setStream(null);
+              };
+              setStream(s);
+
+              const recorder = new MediaRecorder(s, {
                 mimeType: `video/${mimeType};codecs=${codec}`,
               });
 
