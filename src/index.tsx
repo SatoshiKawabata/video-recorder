@@ -85,6 +85,7 @@ const App = () => {
                 value={type}
                 checked={type === videoType}
                 onClick={() => {
+                  setVideoUrl(null);
                   setVideoType(type);
                 }}
               ></input>
@@ -93,54 +94,67 @@ const App = () => {
           );
         })}
       </div>
-      <select
-        onChange={(e) => {
-          setSelectedVideoDeviceId(
-            videoDevices[e.target.selectedIndex].deviceId
-          );
-        }}
-      >
-        {videoDevices.map((d) => {
-          return (
-            <option
-              key={d.deviceId}
-              value={d.deviceId}
-              selected={d.deviceId === selectedVideoDeviceId}
-            >
-              {d.label}
-            </option>
-          );
-        })}
-      </select>
-      <select
-        onChange={(e) => {
-          setSelectedAudioDeviceId(
-            audioDevices[e.target.selectedIndex].deviceId
-          );
-        }}
-      >
-        {audioDevices.map((d) => {
-          return (
-            <option
-              key={d.deviceId}
-              value={d.deviceId}
-              selected={d.deviceId === selectedAudioDeviceId}
-            >
-              {d.label}
-            </option>
-          );
-        })}
-      </select>
-      <video
-        controls
-        muted
-        autoPlay
-        ref={(v) => {
-          if (v) {
-            v.srcObject = stream;
-          }
-        }}
-      ></video>
+      <div>
+        <select
+          onChange={(e) => {
+            setSelectedVideoDeviceId(
+              videoDevices[e.target.selectedIndex].deviceId
+            );
+          }}
+        >
+          {videoDevices.map((d) => {
+            return (
+              <option
+                key={d.deviceId}
+                value={d.deviceId}
+                selected={d.deviceId === selectedVideoDeviceId}
+              >
+                {d.label}
+              </option>
+            );
+          })}
+        </select>
+        <select
+          onChange={(e) => {
+            setSelectedAudioDeviceId(
+              audioDevices[e.target.selectedIndex].deviceId
+            );
+          }}
+        >
+          {audioDevices.map((d) => {
+            return (
+              <option
+                key={d.deviceId}
+                value={d.deviceId}
+                selected={d.deviceId === selectedAudioDeviceId}
+              >
+                {d.label}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+      <div>
+        {stream ? (
+          <video
+            width={400}
+            controls
+            muted
+            autoPlay
+            ref={(v) => {
+              if (v) {
+                if (videoUrl) {
+                  v.srcObject = null;
+                  v.src = videoUrl;
+                } else {
+                  v.src = "";
+                  v.srcObject = stream;
+                }
+              }
+            }}
+          ></video>
+        ) : null}
+      </div>
       {(videoType === VideoTypes.Camera && stream) ||
       videoType === VideoTypes.Screen ? (
         recorder ? (
@@ -158,15 +172,24 @@ const App = () => {
             type="button"
             onClick={async () => {
               const { mimeType, codec } = config;
-              const s = await getScreenStream();
-              s.getVideoTracks()[0].onended = () => {
-                recorder && recorder.stop();
-                setRecorder(null);
-                setStream(null);
-              };
-              setStream(s);
+              let strm: MediaStream;
+              if (videoType === VideoTypes.Screen) {
+                const s = await getScreenStream();
+                s.getVideoTracks()[0].onended = () => {
+                  recorder && recorder.stop();
+                  setRecorder(null);
+                  setStream(null);
+                };
+                setStream(s);
+                strm = s;
+              } else if (stream) {
+                strm = stream;
+              } else {
+                console.error("There is no stream.");
+                return;
+              }
 
-              const recorder = new MediaRecorder(s, {
+              const recorder = new MediaRecorder(strm, {
                 mimeType: `video/${mimeType};codecs=${codec}`,
               });
 
