@@ -94,67 +94,64 @@ const App = () => {
           );
         })}
       </div>
-      <div>
-        <select
-          onChange={(e) => {
-            setSelectedVideoDeviceId(
-              videoDevices[e.target.selectedIndex].deviceId
-            );
-          }}
-        >
-          {videoDevices.map((d) => {
-            return (
-              <option
-                key={d.deviceId}
-                value={d.deviceId}
-                selected={d.deviceId === selectedVideoDeviceId}
-              >
-                {d.label}
-              </option>
-            );
-          })}
-        </select>
-        <select
-          onChange={(e) => {
-            setSelectedAudioDeviceId(
-              audioDevices[e.target.selectedIndex].deviceId
-            );
-          }}
-        >
-          {audioDevices.map((d) => {
-            return (
-              <option
-                key={d.deviceId}
-                value={d.deviceId}
-                selected={d.deviceId === selectedAudioDeviceId}
-              >
-                {d.label}
-              </option>
-            );
-          })}
-        </select>
-      </div>
-      <div>
-        {stream ? (
-          <video
-            width={400}
-            controls
-            muted
-            autoPlay
-            ref={(v) => {
-              if (v) {
-                if (videoUrl) {
-                  v.srcObject = null;
-                  v.src = videoUrl;
-                } else {
+      {stream ? (
+        <>
+          <div>
+            <select
+              onChange={(e) => {
+                setSelectedVideoDeviceId(
+                  videoDevices[e.target.selectedIndex].deviceId
+                );
+              }}
+            >
+              {videoDevices.map((d) => {
+                return (
+                  <option
+                    key={d.deviceId}
+                    value={d.deviceId}
+                    selected={d.deviceId === selectedVideoDeviceId}
+                  >
+                    {d.label}
+                  </option>
+                );
+              })}
+            </select>
+            <select
+              onChange={(e) => {
+                setSelectedAudioDeviceId(
+                  audioDevices[e.target.selectedIndex].deviceId
+                );
+              }}
+            >
+              {audioDevices.map((d) => {
+                return (
+                  <option
+                    key={d.deviceId}
+                    value={d.deviceId}
+                    selected={d.deviceId === selectedAudioDeviceId}
+                  >
+                    {d.label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div>
+            <video
+              width={400}
+              controls
+              muted
+              autoPlay
+              ref={(v) => {
+                if (v) {
                   v.src = "";
                   v.srcObject = stream;
                 }
-              }
-            }}
-          ></video>
-        ) : null}
-      </div>
+              }}
+            ></video>
+          </div>
+        </>
+      ) : null}
       {(videoType === VideoTypes.Camera && stream) ||
       videoType === VideoTypes.Screen ? (
         recorder ? (
@@ -163,6 +160,10 @@ const App = () => {
             onClick={() => {
               recorder?.stop();
               setRecorder(null);
+              if (videoType === VideoTypes.Screen) {
+                setStream(null);
+                stream?.getTracks().forEach((t) => t.stop());
+              }
             }}
           >
             Stop
@@ -209,13 +210,27 @@ const App = () => {
         )
       ) : null}
       {videoUrl ? (
-        <a
-          ref={downloadRef}
-          href={videoUrl}
-          download={`${config.fileName}.${config.mimeType}`}
-        >
-          download
-        </a>
+        <div>
+          <a
+            ref={downloadRef}
+            href={videoUrl}
+            download={`${config.fileName}.${config.mimeType}`}
+          >
+            download
+          </a>
+          <video
+            width={400}
+            controls
+            muted
+            autoPlay
+            ref={(v) => {
+              if (v) {
+                v.srcObject = null;
+                v.src = videoUrl;
+              }
+            }}
+          ></video>
+        </div>
       ) : null}
     </>
   );
