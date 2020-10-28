@@ -1,6 +1,12 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { RecordConfig } from "./types";
+import { Provider, defaultTheme, Button } from "@adobe/react-spectrum";
+
+/**
+ * そろそろUIを作り始めても良いかも
+ * codecのリストを出す
+ */
 
 enum VideoTypes {
   Camera = "Camera",
@@ -73,7 +79,7 @@ const App = () => {
   }, [recorder]);
 
   return (
-    <>
+    <Provider theme={defaultTheme}>
       <h1>Video Recorder</h1>
       <div>
         {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
@@ -232,7 +238,10 @@ const App = () => {
           ></video>
         </div>
       ) : null}
-    </>
+      <Button variant="cta" onPress={() => alert("Hey there!")}>
+        Hello React Spectrum!
+      </Button>
+    </Provider>
   );
 };
 
