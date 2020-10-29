@@ -5,6 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "@adobe/react-spectrum": "^3.4.0",
+    "modern-css-reset": "^1.1.1",
     "preact": "^10.4.8",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",

@@ -1,7 +1,19 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { RecordConfig } from "./types";
-import { Provider, defaultTheme, Button } from "@adobe/react-spectrum";
+import {
+  Provider,
+  defaultTheme,
+  Button,
+  View,
+  ListBox,
+  Item,
+  Picker,
+  RadioGroup,
+  Radio,
+  Heading,
+} from "@adobe/react-spectrum";
+import "modern-css-reset";
 
 /**
  * そろそろUIを作り始めても良いかも
@@ -79,169 +91,149 @@ const App = () => {
   }, [recorder]);
 
   return (
-    <Provider theme={defaultTheme}>
-      <h1>Video Recorder</h1>
-      <div>
-        {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
-          return (
-            <label>
-              <input
-                type="radio"
-                name="VideoTypes"
-                value={type}
-                checked={type === videoType}
-                onClick={() => {
-                  setVideoUrl(null);
-                  setVideoType(type);
-                }}
-              ></input>
-              {type}
-            </label>
-          );
-        })}
-      </div>
-      {stream ? (
-        <>
-          <div>
-            <select
-              onChange={(e) => {
-                setSelectedVideoDeviceId(
-                  videoDevices[e.target.selectedIndex].deviceId
-                );
+    <>
+      <Provider theme={defaultTheme}>
+        <View height="100vh">
+          <Heading level={1}>Video Recorder</Heading>
+          <View>
+            <RadioGroup
+              orientation="horizontal"
+              label="Device"
+              value={videoType}
+              onChange={(value) => {
+                setVideoType(value as VideoTypes);
               }}
             >
-              {videoDevices.map((d) => {
-                return (
-                  <option
-                    key={d.deviceId}
-                    value={d.deviceId}
-                    selected={d.deviceId === selectedVideoDeviceId}
-                  >
-                    {d.label}
-                  </option>
-                );
+              {[VideoTypes.Camera, VideoTypes.Screen].map((type) => {
+                return <Radio value={type}>{type}</Radio>;
               })}
-            </select>
-            <select
-              onChange={(e) => {
-                setSelectedAudioDeviceId(
-                  audioDevices[e.target.selectedIndex].deviceId
-                );
-              }}
-            >
-              {audioDevices.map((d) => {
-                return (
-                  <option
-                    key={d.deviceId}
-                    value={d.deviceId}
-                    selected={d.deviceId === selectedAudioDeviceId}
-                  >
-                    {d.label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div>
-            <video
-              width={400}
-              controls
-              muted
-              autoPlay
-              ref={(v) => {
-                if (v) {
-                  v.src = "";
-                  v.srcObject = stream;
-                }
-              }}
-            ></video>
-          </div>
-        </>
-      ) : null}
-      {(videoType === VideoTypes.Camera && stream) ||
-      videoType === VideoTypes.Screen ? (
-        recorder ? (
-          <button
-            type="button"
-            onClick={() => {
-              recorder?.stop();
-              setRecorder(null);
-              if (videoType === VideoTypes.Screen) {
-                setStream(null);
-                stream?.getTracks().forEach((t) => t.stop());
-              }
-            }}
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={async () => {
-              const { mimeType, codec } = config;
-              let strm: MediaStream;
-              if (videoType === VideoTypes.Screen) {
-                const s = await getScreenStream();
-                s.getVideoTracks()[0].onended = () => {
-                  recorder && recorder.stop();
+            </RadioGroup>
+          </View>
+          {stream ? (
+            <>
+              <View>
+                <Picker
+                  defaultSelectedKey={selectedVideoDeviceId}
+                  onSelectionChange={(key) => {
+                    setSelectedVideoDeviceId(key as string);
+                  }}
+                >
+                  {videoDevices.map((d) => {
+                    return <Item key={d.deviceId}>{d.label}</Item>;
+                  })}
+                </Picker>
+                <Picker
+                  defaultSelectedKey={selectedAudioDeviceId}
+                  onSelectionChange={(key) => {
+                    setSelectedAudioDeviceId(key as string);
+                  }}
+                >
+                  {audioDevices.map((d) => {
+                    return <Item key={d.deviceId}>{d.label}</Item>;
+                  })}
+                </Picker>
+              </View>
+              <View>
+                <video
+                  width={400}
+                  controls
+                  muted
+                  autoPlay
+                  ref={(v) => {
+                    if (v) {
+                      v.src = "";
+                      v.srcObject = stream;
+                    }
+                  }}
+                ></video>
+              </View>
+            </>
+          ) : null}
+          {(videoType === VideoTypes.Camera && stream) ||
+          videoType === VideoTypes.Screen ? (
+            recorder ? (
+              <Button
+                UNSAFE_style={{ cursor: "pointer" }}
+                variant="cta"
+                onPress={() => {
+                  recorder?.stop();
                   setRecorder(null);
-                  setStream(null);
-                };
-                setStream(s);
-                strm = s;
-              } else if (stream) {
-                strm = stream;
-              } else {
-                console.error("There is no stream.");
-                return;
-              }
+                  if (videoType === VideoTypes.Screen) {
+                    setStream(null);
+                    stream?.getTracks().forEach((t) => t.stop());
+                  }
+                }}
+              >
+                Stop
+              </Button>
+            ) : (
+              <Button
+                UNSAFE_style={{ cursor: "pointer" }}
+                variant="cta"
+                onPress={async () => {
+                  const { mimeType, codec } = config;
+                  let strm: MediaStream;
+                  if (videoType === VideoTypes.Screen) {
+                    const s = await getScreenStream();
+                    s.getVideoTracks()[0].onended = () => {
+                      recorder && recorder.stop();
+                      setRecorder(null);
+                      setStream(null);
+                    };
+                    setStream(s);
+                    strm = s;
+                  } else if (stream) {
+                    strm = stream;
+                  } else {
+                    console.error("There is no stream.");
+                    return;
+                  }
 
-              const recorder = new MediaRecorder(strm, {
-                mimeType: `video/${mimeType};codecs=${codec}`,
-              });
+                  const recorder = new MediaRecorder(strm, {
+                    mimeType: `video/${mimeType};codecs=${codec}`,
+                  });
 
-              recorder.addEventListener("dataavailable", (e) => {
-                const blob = new Blob([e.data], { type: e.data.type });
-                const url = URL.createObjectURL(blob);
-                setVideoUrl(url);
-                setRecorder(null);
-                downloadRef.current?.click();
-              });
-              recorder.start();
-              setRecorder(recorder);
-            }}
-          >
-            Record
-          </button>
-        )
-      ) : null}
-      {videoUrl ? (
-        <div>
-          <a
-            ref={downloadRef}
-            href={videoUrl}
-            download={`${config.fileName}.${config.mimeType}`}
-          >
-            download
-          </a>
-          <video
-            width={400}
-            controls
-            muted
-            autoPlay
-            ref={(v) => {
-              if (v) {
-                v.srcObject = null;
-                v.src = videoUrl;
-              }
-            }}
-          ></video>
-        </div>
-      ) : null}
-      <Button variant="cta" onPress={() => alert("Hey there!")}>
-        Hello React Spectrum!
-      </Button>
-    </Provider>
+                  recorder.addEventListener("dataavailable", (e) => {
+                    const blob = new Blob([e.data], { type: e.data.type });
+                    const url = URL.createObjectURL(blob);
+                    setVideoUrl(url);
+                    setRecorder(null);
+                    downloadRef.current?.click();
+                  });
+                  recorder.start();
+                  setRecorder(recorder);
+                }}
+              >
+                Record
+              </Button>
+            )
+          ) : null}
+          {videoUrl ? (
+            <View>
+              <a
+                ref={downloadRef}
+                href={videoUrl}
+                download={`${config.fileName}.${config.mimeType}`}
+              >
+                download
+              </a>
+              <video
+                width={400}
+                controls
+                muted
+                autoPlay
+                ref={(v) => {
+                  if (v) {
+                    v.srcObject = null;
+                    v.src = videoUrl;
+                  }
+                }}
+              ></video>
+            </View>
+          ) : null}
+        </View>
+      </Provider>
+    </>
   );
 };
 
