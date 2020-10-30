@@ -12,6 +12,7 @@ import {
   RadioGroup,
   Radio,
   Heading,
+  Link,
 } from "@adobe/react-spectrum";
 import "modern-css-reset";
 
@@ -209,27 +210,34 @@ const App = () => {
             )
           ) : null}
           {videoUrl ? (
-            <View>
-              <a
-                ref={downloadRef}
-                href={videoUrl}
-                download={`${config.fileName}.${config.mimeType}`}
-              >
-                download
-              </a>
-              <video
-                width={400}
-                controls
-                muted
-                autoPlay
-                ref={(v) => {
-                  if (v) {
-                    v.srcObject = null;
-                    v.src = videoUrl;
-                  }
-                }}
-              ></video>
-            </View>
+            <>
+              <View>
+                <Heading level={3}>Preview</Heading>
+                <video
+                  width={400}
+                  controls
+                  muted
+                  autoPlay
+                  ref={(v) => {
+                    if (v) {
+                      v.srcObject = null;
+                      v.src = videoUrl;
+                    }
+                  }}
+                ></video>
+              </View>
+              <View>
+                <Link>
+                  <a
+                    ref={downloadRef}
+                    href={videoUrl}
+                    download={`${config.fileName}.${config.mimeType}`}
+                  >
+                    download
+                  </a>
+                </Link>
+              </View>
+            </>
           ) : null}
         </View>
       </Provider>
