@@ -94,7 +94,7 @@ const App = () => {
   return (
     <>
       <Provider theme={defaultTheme}>
-        <View height="100vh">
+        <View height="100vh" width={800} margin="auto">
           <Heading level={1}>Video Recorder</Heading>
           <View>
             <RadioGroup
