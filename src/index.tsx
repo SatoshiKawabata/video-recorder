@@ -13,6 +13,14 @@ import {
   Radio,
   Heading,
   Link,
+  Dialog,
+  Header,
+  Divider,
+  Content,
+  ButtonGroup,
+  Text,
+  DialogTrigger,
+  ActionButton,
 } from "@adobe/react-spectrum";
 import "modern-css-reset";
 
@@ -240,6 +248,26 @@ const App = () => {
             </>
           ) : null}
         </View>
+
+        <DialogTrigger>
+          <ActionButton>Check connectivity</ActionButton>
+          <Dialog>
+            <Heading>Internet Speed Test</Heading>
+            <Header>Connection status: Connected</Header>
+            <Divider />
+            <Content>
+              <Text>Start speed test?</Text>
+            </Content>
+            <ButtonGroup>
+              <Button variant="secondary" onPress={close}>
+                Cancel
+              </Button>
+              <Button variant="cta" onPress={close}>
+                Confirm
+              </Button>
+            </ButtonGroup>
+          </Dialog>
+        </DialogTrigger>
       </Provider>
     </>
   );
