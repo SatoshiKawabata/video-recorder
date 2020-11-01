@@ -104,10 +104,10 @@ const App = () => {
       <Provider theme={defaultTheme}>
         <View height="100vh" width={800} margin="auto">
           <Heading level={1}>Video Recorder</Heading>
-          <View>
+          <View marginTop={16}>
+            <Heading level={3}>Recording target</Heading>
             <RadioGroup
               orientation="horizontal"
-              label="Device"
               value={videoType}
               onChange={(value) => {
                 setVideoType(value as VideoTypes);
@@ -120,7 +120,8 @@ const App = () => {
           </View>
           {stream ? (
             <>
-              <View>
+              <View marginTop={16}>
+                <Heading level={3}>Device</Heading>
                 <Picker
                   defaultSelectedKey={selectedVideoDeviceId}
                   onSelectionChange={(key) => {
@@ -142,7 +143,8 @@ const App = () => {
                   })}
                 </Picker>
               </View>
-              <View>
+              <View marginTop={16}>
+                <Heading level={3}>Preview</Heading>
                 <video
                   width={400}
                   controls
@@ -161,65 +163,71 @@ const App = () => {
           {(videoType === VideoTypes.Camera && stream) ||
           videoType === VideoTypes.Screen ? (
             recorder ? (
-              <Button
-                UNSAFE_style={{ cursor: "pointer" }}
-                variant="cta"
-                onPress={() => {
-                  recorder?.stop();
-                  setRecorder(null);
-                  if (videoType === VideoTypes.Screen) {
-                    setStream(null);
-                    stream?.getTracks().forEach((t) => t.stop());
-                  }
-                }}
-              >
-                Stop
-              </Button>
-            ) : (
-              <Button
-                UNSAFE_style={{ cursor: "pointer" }}
-                variant="cta"
-                onPress={async () => {
-                  const { mimeType, codec } = config;
-                  let strm: MediaStream;
-                  if (videoType === VideoTypes.Screen) {
-                    const s = await getScreenStream();
-                    s.getVideoTracks()[0].onended = () => {
-                      recorder && recorder.stop();
-                      setRecorder(null);
-                      setStream(null);
-                    };
-                    setStream(s);
-                    strm = s;
-                  } else if (stream) {
-                    strm = stream;
-                  } else {
-                    console.error("There is no stream.");
-                    return;
-                  }
-
-                  const recorder = new MediaRecorder(strm, {
-                    mimeType: `video/${mimeType};codecs=${codec}`,
-                  });
-
-                  recorder.addEventListener("dataavailable", (e) => {
-                    const blob = new Blob([e.data], { type: e.data.type });
-                    const url = URL.createObjectURL(blob);
-                    setVideoUrl(url);
+              <View marginTop={16}>
+                <Button
+                  UNSAFE_style={{ cursor: "pointer" }}
+                  variant="cta"
+                  onPress={() => {
+                    recorder?.stop();
                     setRecorder(null);
-                    downloadRef.current?.click();
-                  });
-                  recorder.start();
-                  setRecorder(recorder);
-                }}
-              >
-                Record
-              </Button>
+                    if (videoType === VideoTypes.Screen) {
+                      setStream(null);
+                      stream?.getTracks().forEach((t) => t.stop());
+                    }
+                  }}
+                >
+                  Stop
+                </Button>
+              </View>
+            ) : (
+              <View marginTop={16}>
+                <Button
+                  UNSAFE_style={{ cursor: "pointer" }}
+                  variant="cta"
+                  onPress={async () => {
+                    const { mimeType, codec } = config;
+                    let strm: MediaStream;
+                    if (videoType === VideoTypes.Screen) {
+                      const s = await getScreenStream();
+                      s.getVideoTracks()[0].onended = () => {
+                        recorder && recorder.stop();
+                        setRecorder(null);
+                        setStream(null);
+                      };
+                      setStream(s);
+                      strm = s;
+                    } else if (stream) {
+                      strm = stream;
+                    } else {
+                      console.error("There is no stream.");
+                      return;
+                    }
+
+                    const recorder = new MediaRecorder(strm, {
+                      mimeType: `video/${mimeType};codecs=${codec}`,
+                    });
+
+                    recorder.addEventListener("dataavailable", (e) => {
+                      const blob = new Blob([e.data], { type: e.data.type });
+                      const url = URL.createObjectURL(blob);
+                      setVideoUrl(url);
+                      setRecorder(null);
+                      downloadRef.current?.click();
+                    });
+                    recorder.start();
+                    setRecorder(recorder);
+                  }}
+                >
+                  {videoType === VideoTypes.Camera
+                    ? "Record"
+                    : "Select screenn and Record"}
+                </Button>{" "}
+              </View>
             )
           ) : null}
           {videoUrl ? (
             <>
-              <View>
+              <View marginTop={16}>
                 <Heading level={3}>Preview</Heading>
                 <video
                   width={400}
@@ -248,26 +256,6 @@ const App = () => {
             </>
           ) : null}
         </View>
-
-        <DialogTrigger>
-          <ActionButton>Check connectivity</ActionButton>
-          <Dialog>
-            <Heading>Internet Speed Test</Heading>
-            <Header>Connection status: Connected</Header>
-            <Divider />
-            <Content>
-              <Text>Start speed test?</Text>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>
-                Cancel
-              </Button>
-              <Button variant="cta" onPress={close}>
-                Confirm
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        </DialogTrigger>
       </Provider>
     </>
   );
