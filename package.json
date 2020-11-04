@@ -32,6 +32,7 @@
   },
   "scripts": {
     "build": "npx webpack --mode production --config webpack.config.ts",
+    "build:docs": "npx webpack --mode production --config webpack-docs.config.ts",
     "dev": "npx webpack --mode development --config webpack.dev.ts"
   }
 }
